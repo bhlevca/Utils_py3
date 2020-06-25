@@ -66,7 +66,7 @@ def smooth(x, window_len = 11, window = 'hanning'):
 
     # print "in smooth method"
     # print x, window_len, window
-    s = numpy.r_[2 * x[0] - x[window_len:1:-1], x, 2 * x[-1] - x[-1:-window_len:-1]]
+    s = numpy.r_[2 * x[0] - x[int(window_len):1:-1], x, 2 * x[-1] - x[-1:-int(window_len):-1]]
     # print(len(s))
     if window == 'flat':  # moving average
         w = ones(window_len, 'd')
@@ -74,8 +74,8 @@ def smooth(x, window_len = 11, window = 'hanning'):
         w = eval('numpy.' + window + '(window_len)')
     y = numpy.convolve(w / w.sum(), s, mode = 'same')
     dy = s.copy()
-    dy[window_len - 1:-window_len + 1] = s[window_len - 1:-window_len + 1] - y[window_len - 1:-window_len + 1]
-    return [y[window_len - 1:-window_len + 1], dy[window_len - 1:-window_len + 1]]
+    dy[int(window_len) - 1:-int(window_len) + 1] = s[int(window_len) - 1:-int(window_len) + 1] - y[int(window_len) - 1:-int(window_len) + 1]
+    return [y[int(window_len) - 1:-int(window_len) + 1], dy[int(window_len) - 1:-int(window_len) + 1]]
 
 
 def smoothfit(x, y, winsize, window = 'hanning'):

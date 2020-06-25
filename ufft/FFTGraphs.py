@@ -289,7 +289,7 @@ class FFTGraphs(object):
     # end plotSingleSideAplitudeSpectrumFreq
 
 
-    def plotPSD2SpectrumsFreq(self, lake_name, bay_name, funits = "Hz", title = None,
+    def plotPSD2SpectrumsFreq_old(self, lake_name, bay_name, funits = "Hz", title = None,
                                          y_label1 = None, tunits = None,
                                          log = False, fontsize = 20, plottitle = False, grid = False, \
                                          ymax = None, graph = True,
@@ -366,6 +366,113 @@ class FFTGraphs(object):
                     return [title, xlabel, ylabel1, xa, ya, legend, log, plottitle, ymax_lim]
                 else:
                     return [title, xlabel, ylabel1, xa, ya, ci05, ci95, legend, log, fontsize, plottitle, ymax]
+    # end plotSingleSideAplitudeSpectrumFreq
+
+    #-------------------------------------------------------------------------------------------
+    def plotPSD2SpectrumsFreq(self, lake_name, bay_name, funits="Hz", \
+                              log=False, fontsize=20, plottitle=False, grid=True, \
+                              ymax=None, graph=True, ymax_lim2=None, \
+                              ylabel1="Label1", ylabel2="Label2", \
+                              drawslope=False, ispower=False):
+
+        title = None
+        sSeries1 = None
+
+        # smooth only if not segmented
+        if self.num_segments == 1:
+            if ispower:
+                sSeries = fft_utils.smoothSeries(self.power, 5)
+            else:
+                sSeries = fft_utils.smoothSeries(self.mx, 5)
+        else:
+            if ispower:
+                sSeries = self.power
+            else:
+                sSeries = self.mx
+
+        if (self.filename1 != None or self.mx1 is not None):
+            if self.num_segments == 1:
+                if ispower:
+                    sSeries1 = fft_utils.smoothSeries(self.power1, 5)
+                else:
+                    sSeries1 = fft_utils.smoothSeries(self.mx1, 5)
+            else:
+                if ispower:
+                    sSeries1 = self.power1
+                else:
+                    sSeries1 = self.mx1
+        else:
+            warnings.warn('Error: Second set of data not provided')
+            return
+        # end
+
+        if self.show:
+            # Plot single - sided amplitude spectrum.
+
+            if funits == 'Hz':
+                xlabel = 'Frequency [Hz]'
+                f = self.f
+            elif funits == 'cph':
+                xlabel = 'Frequency [cph]'
+                f = self.f * 3600
+            # end if
+
+            if ylabel1 == None:
+                ylabel1 = '|Z(f)| [m]'
+            else:
+                ylabel1 = ylabel1
+
+            if ylabel2 == None:
+                ylabel2 = '|Z(f)| [m]'
+            else:
+                ylabel2 = ylabel2
+
+            if (sSeries1 is not None) :
+                if funits == 'Hz':
+                    f1 = self.f1
+                elif funits == 'cph':
+                    f1 = self.f1 * 3600
+                # end if
+
+                xa = np.array([f, f1])
+                ya = np.array([sSeries, sSeries1])
+                legend = [lake_name, bay_name]
+                if self.num_segments != 1:
+                    ci05 = [self.x05, self.x05_1]
+                    ci95 = [self.x95, self.x95_1]
+
+            else:
+                xa = np.array([f])
+                ya = np.array([sSeries])
+                legend = [lake_name]
+                if self.num_segments != 1:
+                    ci05 = [self.x05]
+                    ci95 = [self.x95]
+            # end
+            if graph:
+                if self.num_segments == 1:
+                    fft_utils.plot_n_Array(title, xlabel, ylabel1, xa, ya, legend=legend, log=log, plottitle=plottitle,
+                                           ymax_lim=ymax,
+                                           twoaxes=twoaxes, ylabel2=ylabel2, ymax_lim2=ymax_lim2)
+                else:
+                    # ===========================================================
+                    # ax = fft_utils.plot_n_Array_with_CI(title, xlabel, ylabel1, xa, ya, ci05, ci95, legend = legend, \
+                    #                                 log = log, fontsize = fontsize, plottitle = plottitle, grid = grid, ymax_lim = ymax,\
+                    #                                 twoaxes = False, ylabel2 = ylabel2, ymax_lim2 = ymax_lim2, drawslope = drawslope,\
+                    #                                 threeaxes = True, ylabel3 = ylabel3, ymax_lim3 = ymax_lim3)
+                    # ===========================================================
+                    ax = fft_utils.plot_n_Array_with_CI_twinx(title, xlabel, ylabel1, xa, ya, ci05, ci95, legend=legend, \
+                                                        log=log, fontsize=fontsize, plottitle=plottitle, grid=grid,
+                                                        ymax_lim=ymax, \
+                                                        twoaxes=True, ylabel2=ylabel2, ymax_lim2=ymax_lim2,
+                                                        drawslope=drawslope, \
+                                                        threeaxes=False)
+            else:
+                if self.num_segments == 1:
+                    return [title, xlabel, ylabel1, xa, ya, legend, log, plottitle, ymax_lim]
+                else:
+                    return [title, xlabel, ylabel1, xa, ya, ci05, ci95, legend, log, fontsize, plottitle, ymax]
+
     # end plotSingleSideAplitudeSpectrumFreq
 
 

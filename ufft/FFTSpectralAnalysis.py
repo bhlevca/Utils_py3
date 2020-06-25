@@ -351,7 +351,7 @@ class FFTSpectralAnalysis(object):
         '''
         den = 2 * nseg
         N = len(Time)
-        M = int(N / nseg)
+        M = int(N / nseg) -1
         t = np.zeros((den - 1, M))  # time segments
         x = np.zeros((den - 1, M))  # data segments
 
@@ -368,11 +368,11 @@ class FFTSpectralAnalysis(object):
         # perform FFT
         y = np.zeros((den - 1, M), dtype = np.float)  # data segments
         Tm = np.zeros((den - 1, M), dtype = np.float)  # time segments
-        fftx = np.zeros((den - 1, int(M / 2) + 1), dtype = np.complex)  # transform segments
+        fftx = np.zeros((den - 1, int(M / 2) + 2), dtype = np.complex)  # transform segments
         NumUniquePts = np.zeros(den - 1)  # point segments
-        amplit = np.zeros((den - 1, int(M / 2) + 1), dtype = np.float)  # amplit segments
-        f = np.zeros((den - 1, int(M / 2) + 1), dtype = np.float)  # freq segments
-        power = np.zeros((den - 1, int(M / 2) + 1), dtype = np.complex)  # power segments
+        amplit = np.zeros((den - 1, int(M / 2) + 2), dtype = np.float)  # amplit segments
+        f = np.zeros((den - 1, int(M / 2) + 2), dtype = np.float)  # freq segments
+        power = np.zeros((den - 1, int(M / 2) + 2), dtype = np.complex)  # power segments
 
         for i in range(0, den - 1):
             a = self.fourierTSAnalysis(t[i], x[i], draw, tunits, window)

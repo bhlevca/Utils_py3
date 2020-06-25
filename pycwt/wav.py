@@ -56,7 +56,6 @@ from numpy import (asarray, arange, array, argsort, arctanh, ceil, concatenate, 
 from numpy.fft import fft, ifft, fftfreq
 from numpy.random import randn
 from numpy.lib.polynomial import polyval
-from pylab import find
 from scipy.stats import chi2
 from scipy.special import gamma
 from scipy.signal import convolve2d, lfilter
@@ -761,11 +760,11 @@ def significance(signal, dt, scales, sigma_test = 0, alpha = None,
     elif sigma_test == 1:  # Time-averaged significance
         if len(dof) == 1:
             dof = zeros(1, J + 1) + dof
-        sel = find(dof < 1)
+        sel = dof[dof < 1]
         dof[sel] = 1
         # As in Torrence and Compo (1998), equation 23:
         dof = dofmin * (1 + (dof * dt / gamma_fac / scales) ** 2) ** 0.5
-        sel = find(dof < dofmin)
+        sel = dof[dof < dofmin]
         dof[sel] = dofmin  # Minimum dof is dofmin
         for n, d in enumerate(dof):
             chisquare = chi2.ppf(significance_level, d) / d;
@@ -779,7 +778,7 @@ def significance(signal, dt, scales, sigma_test = 0, alpha = None,
                              (wavelet.name, wavelet.f0))
 
         s1, s2 = dof
-        sel = find((scales >= s1) & (scales <= s2));
+        sel = scales[(scales >= s1) & (scales <= s2)]
         navg = sel.size
         if navg == 0:
             raise Exception('No valid scales between %d and %d.' % (s1, s2))
@@ -1133,7 +1132,8 @@ def wct_significance(a1, a2, significance_level = 0.95, mc_count = 300,
     scales = ones([1, N]) * nW1['sj'][:, None]
     #
     sig95 = zeros(kwargs['J'] + 1)
-    maxscale = find(outsidecoi.any(axis = 1))[-1]
+    #maxscale = find(outsidecoi.any(axis = 1))[-1]
+    maxscale = [outsidecoi.any(axis=1)][-1]
     sig95[outsidecoi.any(axis = 1)] = nan
     #
     nbins = 1000

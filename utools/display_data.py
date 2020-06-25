@@ -1,7 +1,7 @@
 import numpy
 import matplotlib.pyplot as plt
 import matplotlib
-# don't do this here matplotlib.pyplot.switch_backend('QT4Agg')
+#matplotlib.pyplot.switch_backend('QT4Agg')
 from datetime import datetime
 from matplotlib.dates import MONDAY, SATURDAY
 import matplotlib.dates as dates
@@ -9,7 +9,7 @@ import time, os, datetime, math, sys
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import MaxNLocator
 from scipy import stats
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from . import zero_to_nan as z2n
 
 import ufft.fft_utils as fft_utils
@@ -160,10 +160,15 @@ def plot_hodograph(name, ur, vr, bins, dt, tunit = "sec", vunit = "m/s", disp_lu
         plt.title(name).set_fontsize(fontsize + 2)
     plt.show()
 
+def normalize_ts(timeseries):
+    normal=(timeseries - timeseries.min()) / (timeseries.max() - timeseries.min())
+    return  normal
+
 def display_scatter(x, y, slope = False, type = 'stats', labels = None, fontsize = 20):
     if type == 'stats':
         # or with stats
-        plt.plot(x, y, 'o')
+        fig, ax = plt.subplots()
+        ax.plot(x, y, 'o')
         if slope:
             slope, intercept, r_value, p_value, slope_std_error = stats.linregress(x, y)
             print("R-value=%f" % r_value)
@@ -173,7 +178,11 @@ def display_scatter(x, y, slope = False, type = 'stats', labels = None, fontsize
             degrees_of_freedom = len(x) - 2
             residual_std_error = numpy.sqrt(numpy.sum(pred_error ** 2) / degrees_of_freedom)
             # Plotting
-            plt.plot(x, predict_y, 'k-')
+            leg = "R$^2$=%0.2f" % (r_value+0.05)
+            ax.annotate(leg, xy=(85, 320), xycoords='axes points',
+                        size=14, ha='right', va='top',
+                        bbox=dict(boxstyle='round', edgecolor='white', fc='w'))
+            ax.plot(x, predict_y, 'k-')
 
     elif type == 'simple':
         plt.scatter(x, y, marker = "square", color = "blue")
@@ -185,7 +194,7 @@ def display_scatter(x, y, slope = False, type = 'stats', labels = None, fontsize
             # print "<%d> | slope:%f" % (i, slope)
             plt.plot(x, yfit, color = 'r')
     elif type == 'linalg':
-        plt.plot(x, y, 'o')
+
         if slope:
             w = linalg.lstsq(x.T, y)[0]  # obtaining the parameters
             # plotting the line
@@ -415,12 +424,7 @@ def display_temperatures(dateTimes, temps, k, fnames = None, revert = False, dif
 
     ls = ['-', '-', '-', '-', '-', '-', '-', '-.', '-', '-', ':', '-.', '-', '--', ':', '-.']
     colour_list = ['b', 'r', 'y', 'g', 'c', 'm', 'k',
-                   'brown', 'darkmagenta', 'cornflowerblue', 'darkorchid', 'crimson', 'darkolivegreen', 'chartreuse',
-                   'b', 'r', 'y', 'g', 'c', 'm', 'k',
-                   'brown', 'darkmagenta', 'cornflowerblue', 'darkorchid', 'crimson', 'darkolivegreen', 'chartreuse',
-                   'b', 'r', 'y', 'g', 'c', 'm', 'k',
-                   'brown', 'darkmagenta', 'cornflowerblue', 'darkorchid', 'crimson', 'darkolivegreen', 'chartreuse'
-                   ]
+                   'brown', 'darkmagenta', 'cornflowerblue', 'darkorchid', 'crimson', 'darkolivegreen', 'chartreuse']
     #===========================================================================
     # colour_list = ['aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black', 'blanchedalmond',
     #                'blue', 'blueviolet', 'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate', 'coral', 'cornflowerblue',
@@ -998,17 +1002,36 @@ def display_mixed_subplot(dateTimes1=[], data=[] , varnames=[], ylabels1=[], lim
     dateTimes3 = [] - for images
     :param label: {str} default=None, one of 'fancy', 'frameless'
     '''
-    def eval_group_order(loop, group_first, len, len1, len2, j, il, ig, groups):
+
+    def eval_group_order_o(loop, group_first, len1, len2, len3, j, il, ig, groups):
         if loop == 1:
             if group_first:
-                return j > len2 - 1 and j < len1 + len2 and il < len1
+                return j > len3 - 1 and j < len2 + len3 and il < len2
             else:
-                return j < len1 and il < len1
+                return j < len2 and il < len2
         if loop == 2:
             if group_first:
-                return j < len2 and ig < len(groups)
+                return j < len3 and ig < len(groups)
             else:
-                return j > len1 - 1 and j < len1 + len2 and ig < len(groups)
+                return j > len2 - 1 and j < len2 + len3 and ig < len(groups)
+    # end eval_group_order_o
+
+    def eval_group_order(loop, group_first, len1, len2, len3, j, il, ig, groups):
+
+        if loop == 1 and j < len1:
+            return True
+        elif loop == 1 and j >= len1:
+            return False
+        else:
+            if loop == 2 and j >= len1 and j < len1 + len2 :
+                return True
+            elif loop == 2 and j >= len1 and j >= len1 + len2:
+                return False
+            else:
+                if loop == 3 and j >= len1 and j >= len1 + len2 and j < len1 + len2 +len3:
+                    return True
+                else:
+                    return False
     # end eval_group_order
 
     colour_list = ['k', 'darkmagenta', 'g', 'b', 'r', 'y', 'g', 'c', 'm',
@@ -1059,7 +1082,7 @@ def display_mixed_subplot(dateTimes1=[], data=[] , varnames=[], ylabels1=[], lim
             ax[j] = fig.add_subplot(gs1[j])
         else:
             ax[j] = fig.add_subplot(gs1[j], sharex=ax[0])
-        if eval_group_order(1, group_first, len, len1, len2, j, il, ig, groups):
+        if eval_group_order(1, group_first, len1, len2, len3, j, il, ig, groups):
             if revert != True:
                 temp = data[il][:]
                 dateTime = dateTimes1[il][:]
@@ -1069,9 +1092,9 @@ def display_mixed_subplot(dateTimes1=[], data=[] , varnames=[], ylabels1=[], lim
 
             if yday == False:
                 if len(varnames) == len1:
-                    lplt = ax[j].plot(dateTime, temp, linewidth = 1.2, label = varnames[il], color = colour_list[il])
+                    lplt = ax[j].plot(dateTime, temp, linewidth = 1, label = varnames[il], color = colour_list[il])
                 else:
-                    lplt = ax[j].plot(dateTime, temp, linewidth=1.2, color=colour_list[il])
+                    lplt = ax[j].plot(dateTime, temp, linewidth=1, color=colour_list[il])
             else:
                 dtime1 = dateTime
                 dofy1 = numpy.zeros(len(dtime1))
@@ -1080,17 +1103,18 @@ def display_mixed_subplot(dateTimes1=[], data=[] , varnames=[], ylabels1=[], lim
                     dofy1[k] = d1.timetuple().tm_yday + d1.timetuple().tm_hour / 24. + d1.timetuple().tm_min / (24. * 60) + d1.timetuple().tm_sec / (24. * 3600)
                 # end for
                 if len(varnames) == len1:
-                    lplt = ax[j].plot(dofy1, temp, linewidth = 1.2, label = varnames[il], color = colour_list[il])
+                    lplt = ax[j].plot(dofy1, temp, linewidth = 1, label = varnames[il], color = colour_list[il])
                 else:
-                    lplt = ax[j].plot(dofy1, temp, linewidth = 1.2, color = colour_list[il])
+                    lplt = ax[j].plot(dofy1, temp, linewidth = 1, color = colour_list[il])
                 if limits1 is not None and len(limits1) == len1:
                     ax[j].set_ylim(limits1[j][0], limits1[j][1])
 
             # endif
             il += 1
-            ax[j].locator_params(nbins = 4, axis = 'y')
+            ax[j].locator_params(nbins=4, axis='y')
+
         # groups
-        elif eval_group_order(2, group_first, len, len1, len2, j, il, ig, groups):
+        elif eval_group_order(2, group_first, len1, len2, len3, j, il, ig, groups):
             if revert != True:
                 temp = [groups[ig][1:], groups[ig + 1][:]]
                 dateTime = [dateTimes2[ig][1:], dateTimes2[ig + 1][:]]
@@ -1098,8 +1122,8 @@ def display_mixed_subplot(dateTimes1=[], data=[] , varnames=[], ylabels1=[], lim
                 temp = [groups[ig][::-1], groups[ig + 1][::-1]]
                 dateTime = [dateTimes2[ig][::-1], dateTimes2[ig + 1][::-1]]
             if yday == False:
-                lplt1 = ax[j].plot(dateTime[0], temp[0], linewidth = 1.2, color = 'r', label = groupnames[ig])
-                lplt2 = ax[j].plot(dateTime[1], temp[1], linewidth = 1.2, color = 'b', label = groupnames[ig + 1])
+                lplt1 = ax[j].plot(dateTime[0], temp[0], linewidth = 1, color = 'r', label = groupnames[ig])
+                lplt2 = ax[j].plot(dateTime[1], temp[1], linewidth = 1, color = 'b', label = groupnames[ig + 1])
                 pass
             else:
                 dtime1 = dateTime[0]
@@ -1115,20 +1139,26 @@ def display_mixed_subplot(dateTimes1=[], data=[] , varnames=[], ylabels1=[], lim
                     dofy2[k] = d2.timetuple().tm_yday + d2.timetuple().tm_hour / 24. + d2.timetuple().tm_min / (24. * 60) + d2.timetuple().tm_sec / (24. * 3600)
                 # end for
                 d2 = dates.num2date(dtime2)
-                lplt1 = ax[j].plot(dofy1, temp[0], linewidth = 1.2, color = 'r', label = groupnames[ig])
-                lplt2 = ax[j].plot(dofy2, temp[1], linewidth = 1.2, color = 'b', label = groupnames[ig + 1])
+                lplt1 = ax[j].plot(dofy1, temp[0], linewidth = 1, color = 'r', label = groupnames[ig])
+                lplt2 = ax[j].plot(dofy2, temp[1], linewidth = 1, color = 'b', label = groupnames[ig + 1])
 
             ig += 2
             ax[j].locator_params(nbins = 4, axis = 'y')
+            ax[j].set_figwidth(ax[j].get_figwidth())-2
+
         # images
-        elif j > len1 + len2 - 1 and j < length and ii < len3:
+        #elif j > len1 + len2 - 1 and j < length and ii < len3:
+        elif eval_group_order(3, group_first, len1, len2, len3, j, il, ig, groups):
             # Make some room for the colorbar
             fig.subplots_adjust(left = 0.07, right = 0.8)
 
             # Add the colorbar outside...
             box = ax[j].get_position()
-            pad, width = 0.02, 0.014
+            pad, width = 0.04, 0.016
             axb[ii] = fig.add_axes([box.xmax + pad, box.ymin, width, box.height])
+            #divider = make_axes_locatable(ax[j])
+            #axb[ii] = divider.append_axes("right", size="3%", pad=0.1)
+
             if cblabel[ii] == None:
                 cblabel[ii] = ""
 
@@ -1253,7 +1283,8 @@ def display_mixed_subplot(dateTimes1=[], data=[] , varnames=[], ylabels1=[], lim
     # fig.autofmt_xdate()
 
     # new seting to make room for labels
-    plt.subplots_adjust(left=0.1, bottom=0.1, right=0.8, top=0.9, wspace=0.02, hspace=None)
+    if False: #this does not work.
+        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.8, top=0.9, wspace=0.02, hspace=None)
 
     plt.draw()
     plt.show()
@@ -1319,7 +1350,8 @@ def display_img_temperatures_sub(fig, ax, axb, dateTimes, temps, tick, maxdepth,
     if interp != None:
         from scipy.interpolate import interp1d
         new_y = numpy.linspace(mindepth, maxdepth - firstlog, m * interp)
-        fint = interp1d(y, Temp.T, kind = 'cubic')
+        #fint = interp1d(y, Temp.T, kind = 'quadratic')
+        fint = interp1d(y, Temp.T, kind='slinear')
         newTemp = fint(new_y).T
         if revert == True:
             yrev = new_y[::-1]
@@ -1337,12 +1369,13 @@ def display_img_temperatures_sub(fig, ax, axb, dateTimes, temps, tick, maxdepth,
 
     X, Y = numpy.meshgrid(dateTime, yrev)
     if maxtemp != None and mintemp != None:
-        im = ax.pcolormesh(X, Y, newTemp, shading = 'gouraud', vmin = mintemp, vmax = maxtemp)  # , cmap = 'gray', norm = LogNorm())
+        im = ax.pcolormesh(X, Y, newTemp, shading = 'gouraud', vmin = mintemp, vmax = maxtemp, cmap = 'jet')#, norm = LogNorm())
     else:
-        im = ax.pcolormesh(X, Y, newTemp, shading = 'gouraud')  # , cmap = 'gray', norm = LogNorm())
+        im = ax.pcolormesh(X, Y, newTemp, shading = 'gouraud', cmap = 'jet')#, norm = LogNorm())
 
     if colorbar:
-        cb = fig.colorbar(im, cax = axb, ax =ax)
+        #cb = fig.colorbar(im, cax = axb, ax =ax)
+        cb = fig.colorbar(im, cax=axb)
         cb.set_clim(mintemp, maxtemp)
         labels = cb.ax.get_yticklabels()
         for t in labels:
@@ -1403,14 +1436,13 @@ def display_img_temperatures_sub(fig, ax, axb, dateTimes, temps, tick, maxdepth,
 
 # end display_img_temperatures_sub
 
-def display_img_temperatures(dateTimes, temps, coeffs, k, tick, maxdepth, firstlog, maxtemp, revert=False,
+def display_img_temperatures(dateTimes, temps, coeffs, k, tick, maxdepth, firstlog, maxtemp, revert = False,
                              fontsize = 20, datetype = 'date', thermocline = True, interp = None, ycustom = None,
                              cblabel = None, draw_hline = False, hline_freq = 2):
     '''
         Can interpolarte only if draw_hline == False
 
     '''
-    newTemp = None
 
     if draw_hline and interp != None:
         print("Error: draw_hline and intepolation are not supportes simultaneously.")
@@ -1450,10 +1482,7 @@ def display_img_temperatures(dateTimes, temps, coeffs, k, tick, maxdepth, firstl
             next = temps[i + 1]
             for jj in range(j, n - 1):
                 # average the missing values
-                try:
-                    Temp[m - 1 - i, jj] = (prev[jj] + next[jj]) / 2.0
-                except:
-                    pass
+                Temp[m - 1 - i, jj] = (prev[jj] + next[jj]) / 2.0
                 jj += 1
                 # print "%d , I=%d" % (j, i)
             # end for
@@ -1464,6 +1493,7 @@ def display_img_temperatures(dateTimes, temps, coeffs, k, tick, maxdepth, firstl
             break
 
     # end for dateTime in dateTimes:
+
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -1562,7 +1592,7 @@ def display_img_temperatures(dateTimes, temps, coeffs, k, tick, maxdepth, firstl
     labels = ax.get_xticklabels()
 
     # draw the thermocline
-    if thermocline and newTemp is not None:
+    if thermocline:
         levels = [13]
         colors = ['k']
         linewidths = [0.6]
@@ -1973,3 +2003,36 @@ def display_avg_vertical_temperature_profiles_err_bar_range(dateTimes, tempsarr,
     plt.show()
 
 
+def display_twinx(dates, data1, data2, label1, label2, ylabel1, ylabel2, doy=True, loc=0):
+    from matplotlib import rc
+    rc('mathtext', default='regular')
+    if doy:
+        dT = fft_utils.timestamp2doy(dates)
+    else:
+        dT= dates[:]
+
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    p1 = ax.plot(dT, data2, 'r-', label=label2) #value converted from cm to m
+    ax.set_xlabel("Day of Year", fontsize=20)
+    ax.set_ylabel(ylabel2, fontsize=20)
+    ax.tick_params(axis='x', labelsize=16)
+    ax.tick_params(axis='y', labelsize=16)
+
+    ax2 = ax.twinx()
+    p2 = ax2.plot(dT,  data1, 'c-', label = label1) #Converted value to profile average
+    ax2.set_xlabel("Day of Year", fontsize=20)
+    ax2.set_ylabel(ylabel1, fontsize=20)
+    ax2.tick_params(axis='y', labelsize=16)
+
+    #legend
+    lns=p1 + p2
+    labs = [l.get_label() for l in lns]
+    ax.legend(lns, labs, loc=0, frameon=False)
+
+    ax.set_ylim([-0.4, 0.4])
+    ax2.set_ylim([-0.15, 0.15])
+
+    plt.show()

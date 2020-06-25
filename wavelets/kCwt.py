@@ -1141,8 +1141,7 @@ class kCwt(object):
         ax.fill(np.concatenate([Time[:1] - dt, Time, Time[-1:] + dt, Time[-1:] + dt, t[:1] - dt,
             t[:1] - dt]), np.log2(np.concatenate([[1e-9], coi, [1e-9],
             period[-1:], period[-1:], [1e-9]])), 'k', alpha = 0.3, hatch = 'x')
-        Yticks = 2 ** np.arange(np.ceil(np.log2(period.min())),
-            np.ceil(np.log2(period.max())))
+        Yticks = 2 ** np.arange(np.ceil(np.log2(period.min())), np.ceil(np.log2(period.max())))
         ax.set_yticks(np.log2(Yticks))
         # ax.set_yticklabels(Yticks)
         print("Change y ticks label")

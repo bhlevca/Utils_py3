@@ -12,8 +12,8 @@ from matplotlib.dates import MONDAY #, SATURDAY
 #import matplotlib.mlab
 #import matplotlib.dates as dates
 #import matplotlib.transforms as mtransforms
-#from mpl_toolkits.axes_grid1 import host_subplot
-#import mpl_toolkits.axisartist as AA
+from mpl_toolkits.axes_grid1 import host_subplot
+import mpl_toolkits.axisartist as AA
 import numpy as np
 import scipy as sp
 import scipy.signal
@@ -383,54 +383,59 @@ def errorbarsemilogx(ax, x0, y0, ci, color):
     ax.semilogy(x0, y0 + ci[0], 'b_')
     ax.semilogy(x0, y0 + ci[1], 'b_')
 
+def set_axis_type(ax, type):
+    if type == 'loglog':
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        print("xscale=log; yscale=log")
+        # ax[i].tick_params(axis='x', labelsize=18)
 
-def plot_n_Array_with_CI(title, xlabel, ylabel, x_arr, y_arr, ci05, ci95, legend = None, linewidth = 0.8, ymax_lim = None, log = 'linear', \
+    elif type == 'log':
+        ax.set_xscale('log')
+        ax.set_yscale('linear')
+        print("xscale=linear; yscale=log")
+    else:
+        print("xscale=linear; yscale=linear")
+
+
+def plot_n_Array_with_CI_twinx(title, xlabel, ylabel, x_arr, y_arr, ci05, ci95, legend = None, linewidth = 0.8, ymax_lim = None, log = 'linear', \
                          fontsize = 20, plottitle = False, grid = False, twoaxes = False, ylabel2 = None, ymax_lim2 = None, drawslope = False,\
                           threeaxes=False, ylabel3 = None, ymax_lim3 = None):
     fig = plt.figure(facecolor = 'w', edgecolor = 'k')
 
     print ("==> In plot_n_Array_with_CI <== fontsize:%d" % fontsize)
     ax=[]
-    Y_labels=[]
-    Y_labels.append(ylabel)
-    sz = 1
+    sz=1
+    #ax1 = host_subplot(111, axes_class=AA.Axes)
+    ax1 = fig.add_subplot(111)
+    # plt.subplots_adjust(right=0.85)
+    set_axis_type(ax1, log)
+    ax1.set_ylabel(ylabel, fontsize=fontsize-2)
+    ax1.set_xlabel(xlabel, fontsize=fontsize-2)
+    ax1.tick_params(labelsize=fontsize - 5)
+    ax.append(ax1)
+
     if  twoaxes or threeaxes:
         sz = 2
-        ax.append(host_subplot(111, axes_class=AA.Axes))
-        plt.subplots_adjust(right=0.75)
-    else:
-        ax.append(fig.add_subplot(111))
-    if twoaxes or threeaxes:
-        ax.append(ax[0].twinx())
-        Y_labels.append(ylabel2)
+        ax2 = ax1.twinx()
+        ax.append(ax2)
+        set_axis_type(ax2, log)
+        ax2.set_ylabel(ylabel2, fontsize=fontsize-2)
+        ax2.set_xlabel(xlabel, fontsize=fontsize-2)
+        ax2.tick_params(labelsize=fontsize - 5)
     if threeaxes:
         sz = 3
-        ax.append(ax[0].twinx())
+        ax3 = ax1.twinx()
+        ax.append(ax3)
+        set_axis_type(ax3, log)
+        ax3.set_ylabel(ylabel3, fontsize=fontsize-2)
+        ax3.set_xlabel(xlabel, fontsize=fontsize-2)
+        ax3.tick_params(labelsize=fontsize - 5)
         offset = 70
         new_fixed_axis = ax[2].get_grid_helper().new_fixed_axis
         ax[2].axis["right"] = new_fixed_axis(loc="right", axes=ax[2],offset=(offset, 0))
         ax[2].axis["right"].toggle(all=True)   
-        Y_labels.append(ylabel3)
     #endif
-    for i in range(0,sz):
-        if log == 'loglog':
-                #line = axs.loglog(x, y, linestyle = lst[i], linewidth = lwt, basex = 10, color = colors[i], label = legend[i])
-                #axs.set_yscale('log')
-                ax[i].set_xscale('log')
-                ax[i].set_yscale('log')
-                # axs.semilogx(x, y, linestyle = lst[i], linewidth = lwt, color = colors[i])
-                print("xscale=log; yscale=log")
-        elif log == 'log':
-            ax[i].set_xscale('log')
-            ax[i].set_yscale('linear')
-            #line = axs.plot(x, y, linestyle = lst[i], linewidth = lwt, color = colors[i], label = legend[i])
-            print("xscale=linear; yscale=log")
-        else:
-            #formatter =  EmbeddedSciFormatter(10, 1)
-            #axs.yaxis.set_major_formatter(formatter)
-            #line = axs.plot(x, y, linestyle = lst[i], linewidth = lwt, color = colors[i], label = legend[i])
-            print("xscale=linear; yscale=linear")
-
 
     lines = []
     Xmax = []
@@ -463,14 +468,21 @@ def plot_n_Array_with_CI(title, xlabel, ylabel, x_arr, y_arr, ci05, ci95, legend
 
             y1 = ci05[i][3:]
             y2 = ci95[i][3:]
+            x = x_arr[i][3:]
+            y = y_arr[i][3:]
+
+            if len(x_arr) < 5:
+                lwt = 1.6 - i * 0.2
+            else:
+                lwt = 1 + i * 0.6
+
             sd = 0.65 - i * 0.15
             ymax = max(np.max(y1), np.max(y2))
             ymin = min(np.min(y1), np.min(y2))
-            
-            # line = axs.plot(x, y1, x, y2, color = [sd, sd, sd], alpha = 0.5)
-            # print y2 > y1
+
             axs.fill_between(x, y1, y2, where = y2 > y1, facecolor = [sd, sd, sd], alpha = 0.5, interpolate = True, linewidth = 0.001)
-            # axs.fill_between(x, y1, y2, facecolor = 'blue', alpha = 0.5, interpolate = True)
+            line = axs.plot(x, y, linestyle=lst[i], linewidth=lwt, color=colors[i], label=legend[i])
+            lines += line
             if len(Ymin) <  i+1:
                 Ymin.append(ymin)
             else:
@@ -484,82 +496,29 @@ def plot_n_Array_with_CI(title, xlabel, ylabel, x_arr, y_arr, ci05, ci95, legend
         #end for 
     # end if len(ci)
 
-    i = 0
-    for a in x_arr:
-        x = x_arr[i][3:]
-        y = y_arr[i][3:]
-        
-        
-        if len(x_arr) < 5:
-            lwt = 1.6 - i * 0.2
-        else:
-            lwt = 1 + i * 0.6
-
-        if threeaxes and i == 2:
-            axs = ax[2] 
-        if (threeaxes and i == 1) or  (twoaxes and i == 1):
-            axs = ax[1]
-        else:
-            axs = ax[0]
-        
-       
-        line = axs.plot(x, y, linestyle = lst[i], linewidth = lwt, color = colors[i], label = legend[i])
-        
-        if drawslope:
-            # select only the data we need to asses
-            x1 = 0.1; x2 = 0.8
-            xsl = []
-            ysl = []
-            for j in range(0, len(x)):
-                if x[j] >= x1 and x[j] <= x2:
-                    xsl.append(x[j])
-                    ysl.append(y[j])
-            # end for
-            xs = np.array(xsl)
-            ys = np.array(ysl)
-            # perform regression
-
-            slope, intercept = np.polyfit(np.log10(xs), np.log10(ys), 1)
-            yfit = 10 ** (intercept + slope * np.log10(xs))
-            # not necessary r_sq = r_squared(ys, ideal_y)
-            print("<%d> | slope:%f" % (i, slope))
-            axs.plot(xs, yfit, color = 'r')
-            
-        lines += line
-        i += 1
-    # end for
-
-    
     #set limits
     for i in range(0, len(ax)):
-        # ax.xaxis.grid(True, 'major')
         vertices = [(Xmin[i], Ymin[i]), (Xmax[i], Ymax[i])]
-        
         ax[i].xaxis.grid(grid, 'minor')
         ax[i].yaxis.grid(grid, 'minor')
-        plt.setp(ax[i].get_xticklabels(), visible = True, fontsize = fontsize - 1)
-        plt.setp(ax[i].get_yticklabels(), visible = True, fontsize = fontsize - 1)
-
         ax[i].grid(grid)
-        ax[i].set_ylabel(Y_labels[i], fontsize = fontsize)
-        ax[i].set_xlabel(xlabel, fontsize = fontsize)
-        #fontd = {'family' : 'serif',
-        #         'color'  : 'darkred',
-        #         'weight' : 'normal',
-        #         'size'   : 'large',
-        #}
-        #ax[i].yaxis.set_label_text(ylabel, fontdict=fontd)
-        if i  == 0 :  side = 'left' 
-        else: side = "right"       
-        
+        if i  == 0 :
+            side = 'left'
+        else:
+            side = "right"
+        """
         if  twoaxes or threeaxes:
-            ax[i].axis[side].label.set_fontsize(fontsize)
-            ax[i].axis["bottom"].label.set_fontsize(fontsize)
+            ax[i].axis[side].label.set_fontsize(fontsize - 4)
+            ax[i].axis["bottom"].label.set_fontsize(fontsize - 4)
+            ax[i].axis[side].major_ticklabels.set_fontsize(fontsize - 7)
+            ax[i].axis["bottom"].major_ticklabels.set_fontsize(fontsize - 7)
         
-
+        for tick in ax[i].xaxis.get_major_ticks():
+            tick.label.set_fontsize(fontsize-4)
+        for tick in ax[i].yaxis.get_major_ticks():
+            tick.label.set_fontsize(fontsize-4)
+        """
     plt.xlim(xmin=np.min(Xmin), xmax=np.max(Xmax))
-    #this causes some problems
-    #plt.ylim(ymin=np.min(Ymin), ymax=np.max(Ymax))
 
     if plottitle:
             plt.title(title, fontsize = fontsize)
@@ -576,12 +535,217 @@ def plot_n_Array_with_CI(title, xlabel, ylabel, x_arr, y_arr, ci05, ci95, legend
         #---------------------------------------------------------- center right    7
         #---------------------------------------------------------- lower center    8
         #---------------------------------------------------------- upper center    9
-        legnd = ax[0].legend(lines, labs, loc = 3)
+        legnd = ax[0].legend(lines, labs, loc=3, frameon=False)
         for label in legnd.get_texts():
-            label.set_fontsize(fontsize-1)
-        plt.legend(frameon=False)
+            label.set_fontsize(fontsize-6)
+
     plt.show()
 # end
+
+
+#------------------------------------------------------------------------------------------------------------------------
+def plot_n_Array_with_CI(title, xlabel, ylabel, x_arr, y_arr, ci05, ci95, legend=None, linewidth=0.8, ymax_lim=None,
+                         log='linear', \
+                         fontsize=20, plottitle=False, grid=False, twoaxes=False, ylabel2=None, ymax_lim2=None,
+                         drawslope=False, \
+                         threeaxes=False, ylabel3=None, ymax_lim3=None):
+    fig = plt.figure(facecolor='w', edgecolor='k')
+
+    print("==> In plot_n_Array_with_CI <== fontsize:%d" % fontsize)
+    ax = []
+    Y_labels = []
+    Y_labels.append(ylabel)
+    sz = 1
+    if twoaxes or threeaxes:
+        sz = 2
+        ax.append(host_subplot(111, axes_class=AA.Axes))
+        plt.subplots_adjust(right=0.75)
+    else:
+        ax.append(fig.add_subplot(111))
+    if twoaxes or threeaxes:
+        ax.append(ax[0].twinx())
+        Y_labels.append(ylabel2)
+    if threeaxes:
+        sz = 3
+        ax.append(ax[0].twinx())
+        offset = 70
+        new_fixed_axis = ax[2].get_grid_helper().new_fixed_axis
+        ax[2].axis["right"] = new_fixed_axis(loc="right", axes=ax[2], offset=(offset, 0))
+        ax[2].axis["right"].toggle(all=True)
+        Y_labels.append(ylabel3)
+    # endif
+    for i in range(0, sz):
+        if log == 'loglog':
+            # line = axs.loglog(x, y, linestyle = lst[i], linewidth = lwt, basex = 10, color = colors[i],
+            # label = legend[i])
+            # axs.set_yscale('log')
+            ax[i].set_xscale('log')
+            ax[i].set_yscale('log')
+            # axs.semilogx(x, y, linestyle = lst[i], linewidth = lwt, color = colors[i])
+            print("xscale=log; yscale=log")
+        elif log == 'log':
+            ax[i].set_xscale('log')
+            ax[i].set_yscale('linear')
+            # line = axs.plot(x, y, linestyle = lst[i], linewidth = lwt, color = colors[i], label = legend[i])
+            print("xscale=linear; yscale=log")
+        else:
+            # formatter =  EmbeddedSciFormatter(10, 1)
+            # axs.yaxis.set_major_formatter(formatter)
+            # line = axs.plot(x, y, linestyle = lst[i], linewidth = lwt, color = colors[i], label = legend[i])
+            print("xscale=linear; yscale=linear")
+
+    lines = []
+    Xmax = []
+    Ymax = []
+    Xmin = []
+    Ymin = []
+
+    lst = ['-', '--', '-.', ':', '-', '--', ':', '-.']
+    lst = ['-', '-', '-', '-', '-', '-', '-', '-']
+    #colors = ['b', 'c', 'r', 'k', 'y', 'm', 'aqua', 'k']
+    colors = ['r', 'c', 'b', 'k', 'y', 'm', 'aqua', 'k']
+    # plot the confidence intervals
+    if len(ci05) > 0:
+        i = 0
+        xc = 0
+        for a in ci05:  # x_arr:
+            arry = hasattr(a, "__len__")
+            x = x_arr[i][3:]
+            y = y_arr[i][3:]
+
+            Xmax.append(np.max(x))
+            Xmin.append(np.min(x))
+
+            if (twoaxes and i == 1) or (threeaxes and i == 1):
+                axs = ax[1]
+            elif threeaxes and i == 2:
+                axs = ax[2]
+            else:
+                axs = ax[0]
+
+            y1 = ci05[i][3:]
+            y2 = ci95[i][3:]
+            sd = 0.65 - i * 0.15
+            ymax = max(np.max(y1), np.max(y2))
+            ymin = min(np.min(y1), np.min(y2))
+
+            # line = axs.plot(x, y1, x, y2, color = [sd, sd, sd], alpha = 0.5)
+            # print y2 > y1
+            axs.fill_between(x, y1, y2, where=y2 > y1, facecolor=[sd, sd, sd], alpha=0.5, interpolate=True,
+                             linewidth=0.001)
+            # axs.fill_between(x, y1, y2, facecolor = 'blue', alpha = 0.5, interpolate = True)
+            if len(Ymin) < i + 1:
+                Ymin.append(ymin)
+            else:
+                Ymin[i] = min(Ymin[i], ymin)
+            if len(Ymax) < i + 1:
+                Ymax.append(ymax)
+            else:
+                Ymax[i] = max(Ymax[i], ymax)
+
+            i += 1
+        # end for
+    # end if len(ci)
+
+    i = 0
+    for a in x_arr:
+        x = x_arr[i][3:]
+        y = y_arr[i][3:]
+
+        if len(x_arr) < 5:
+            lwt = 1.6 - i * 0.2
+        else:
+            lwt = 1 + i * 0.6
+
+        if threeaxes and i == 2:
+            axs = ax[2]
+        if (threeaxes and i == 1) or (twoaxes and i == 1):
+            axs = ax[1]
+        else:
+            axs = ax[0]
+
+        line = axs.plot(x, y, linestyle=lst[i], linewidth=lwt, color=colors[i], label=legend[i])
+
+        if drawslope:
+            # select only the data we need to asses
+            x1 = 0.1;
+            x2 = 0.8
+            xsl = []
+            ysl = []
+            for j in range(0, len(x)):
+                if x[j] >= x1 and x[j] <= x2:
+                    xsl.append(x[j])
+                    ysl.append(y[j])
+            # end for
+            xs = np.array(xsl)
+            ys = np.array(ysl)
+            # perform regression
+
+            slope, intercept = np.polyfit(np.log10(xs), np.log10(ys), 1)
+            yfit = 10 ** (intercept + slope * np.log10(xs))
+            # not necessary r_sq = r_squared(ys, ideal_y)
+            print("<%d> | slope:%f" % (i, slope))
+            axs.plot(xs, yfit, color='r')
+
+        lines += line
+        i += 1
+    # end for
+
+    # set limits
+    for i in range(0, len(ax)):
+        # ax.xaxis.grid(True, 'major')
+        vertices = [(Xmin[i], Ymin[i]), (Xmax[i], Ymax[i])]
+
+        ax[i].xaxis.grid(grid, 'minor')
+        ax[i].yaxis.grid(grid, 'minor')
+        # plt.setp(ax[i].get_xticklabels(), visible = True, fontsize = fontsize - 1)
+        # plt.setp(ax[i].get_yticklabels(), visible = True, fontsize = fontsize - 1)
+        ax[i].tick_params(axis='x', labelsize=fontsize - 8)
+        ax[i].tick_params(axis='y', labelsize=fontsize - 8)
+        # ax[i].set_yticklabels(fontsize=12)
+        ax[i].grid(grid)
+        ax[i].set_ylabel(Y_labels[i], fontsize=fontsize - 6)
+        ax[i].set_xlabel(xlabel, fontsize=fontsize - 6)
+        # fontd = {'family' : 'serif',
+        #         'color'  : 'darkred',
+        #         'weight' : 'normal',
+        #         'size'   : 'large',
+        # }
+        # ax[i].yaxis.set_label_text(ylabel, fontdict=fontd)
+        if i == 0:
+            side = 'left'
+        else:
+            side = "right"
+
+        if twoaxes or threeaxes:
+            ax[i].axis[side].label.set_fontsize(fontsize)
+            ax[i].axis["bottom"].label.set_fontsize(fontsize)
+
+    plt.xlim(xmin=np.min(Xmin), xmax=np.max(Xmax))
+    # this causes some problems
+    # plt.ylim(ymin=np.min(Ymin), ymax=np.max(Ymax))
+
+    if plottitle:
+        plt.title(title, fontsize=fontsize)
+
+    if legend is not None:
+        labs = [l.get_label() for l in lines]
+        # loc=4      position lower right
+        # ---------------------------------------------------------- upper right    1
+        # ---------------------------------------------------------- upper left    2
+        # ---------------------------------------------------------- lower left    3
+        # ---------------------------------------------------------- lower right    4
+        # ---------------------------------------------------------- right    5
+        # ------------------------------------------------------ --- center left    6
+        # ---------------------------------------------------------- center right    7
+        # ---------------------------------------------------------- lower center    8
+        # ---------------------------------------------------------- upper center    9
+        legnd = ax[0].legend(lines, labs, loc=3, frameon=False)
+        for label in legnd.get_texts():
+            label.set_fontsize(fontsize - 8)
+        #plt.legend(frameon=False)
+    plt.show()
+
 
 
 def plotTimeSeries(title, xlabel, ylabel, x, y, legend = None, linewidth = 0.6, plottitle = False, \
